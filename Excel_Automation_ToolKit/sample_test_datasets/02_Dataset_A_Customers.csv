@@ -1,0 +1,21 @@
+CustomerID,CustomerName,Region
+CUST-101,Acme Corp,North
+CUST-102,Globex,South
+CUST-103,Initech,East
+CUST-104,Umbrella Corp,West
+CUST-105,Stark Ind,North
+CUST-106,Wayne Ent,South
+CUST-107,Cyberdyne,East
+CUST-108,Soylent,West
+CUST-109,Massive Dynamic,North
+CUST-110,Hooli,South
+CUST-111,Pied Piper,East
+CUST-112,Dunder Mifflin,West
+CUST-113,Aperture,North
+CUST-114,Black Mesa,South
+CUST-115,Vehement,East
+CUST-116,Monsters Inc,West
+CUST-117,Wonka Ind,North
+CUST-118,Bluth Co,South
+CUST-119,Virtucon,East
+CUST-120,Genco Olive,West
