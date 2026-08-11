@@ -303,7 +303,7 @@ def generate_large_csv_sample():
         cust_id = f"CUST-{i:04d}"
         comp_name = f"Global Tech Corp {i}"
         reg = regions[i % len(regions)]
-        tier = tiers[i % len(tiers)]  # Fixed UnboundLocalError bug
+        tier = tiers[i % len(tiers)]
         credit_limit = float((i * 2500) % 250000 + 15000)
         account_balance = round(credit_limit * 0.35 + (i * 12 % 5000), 2)
         churn_risk_score = round(float((i % 10) * 0.09), 2)
@@ -761,6 +761,8 @@ elif module == "🔍 Dataset Matching & Compare":
                 else:
                     df1_match = df1.copy()
                     df2_match = df2.copy()
+                    
+                    # Convert match keys to string & strip whitespace to prevent mismatch errors
                     df1_match[key1] = df1_match[key1].astype(str).str.strip()
                     df2_match[key2] = df2_match[key2].astype(str).str.strip()
 
@@ -790,25 +792,54 @@ elif module == "🔍 Dataset Matching & Compare":
             df1 = pd.read_csv(f1) if f1.name.endswith('.csv') else pd.read_excel(f1)
             df2 = pd.read_csv(f2) if f2.name.endswith('.csv') else pd.read_excel(f2)
 
-            if st.button("Run Cell-by-Cell Comparison", use_container_width=True):
-                if not (is_allowed_file(f1) and is_allowed_file(f2)):
-                    show_subscription_required_warning(f"{f1.name} / {f2.name}")
-                else:
-                    common_cols = list(set(df1.columns).intersection(set(df2.columns)))
-                    df1_c = df1[common_cols]
-                    df2_c = df2[common_cols]
+            st.markdown("##### Comparison Settings")
+            common_cols = list(set(df1.columns).intersection(set(df2.columns)))
+            
+            if not common_cols:
+                st.warning("⚠️ File A and File B share no common column headers. Please select the 'Match Two Datasets' tool above if you want to join datasets with different schemas.")
+            else:
+                align_key = st.selectbox(
+                    "Select Key Column for Index Alignment (Recommended)",
+                    ["[Use Default Row Numbers]"] + common_cols,
+                    help="Select a unique ID field (like ID or Code) to line up corresponding rows before comparing."
+                )
 
-                    diff = df1_c.compare(df2_c)
-                    if diff.empty:
-                        st.success("✅ Datasets are 100% identical across all overlapping fields!")
+                if st.button("Run Cell-by-Cell Comparison", use_container_width=True):
+                    if not (is_allowed_file(f1) and is_allowed_file(f2)):
+                        show_subscription_required_warning(f"{f1.name} / {f2.name}")
                     else:
-                        st.warning(f"Detected {len(diff):,} row differences across common attributes.")
-                        st.dataframe(diff, use_container_width=True)
+                        df1_c = df1[common_cols].copy()
+                        df2_c = df2[common_cols].copy()
 
-                        output = io.BytesIO()
-                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                            diff.to_excel(writer)
-                        st.download_button("📥 Download Row Difference Log", data=output.getvalue(), file_name="Cell_Difference_Log.xlsx", use_container_width=True)
+                        if align_key != "[Use Default Row Numbers]":
+                            df1_c = df1_c.dropna(subset=[align_key]).drop_duplicates(subset=[align_key]).set_index(align_key)
+                            df2_c = df2_c.dropna(subset=[align_key]).drop_duplicates(subset=[align_key]).set_index(align_key)
+                            
+                            # Align indices and columns
+                            common_index = df1_c.index.intersection(df2_c.index)
+                            df1_c = df1_c.loc[common_index]
+                            df2_c = df2_c.loc[common_index]
+
+                        # Check shape equality
+                        if df1_c.shape != df2_c.shape:
+                            st.warning(
+                                f"⚠️ File shapes do not match exactly after alignment.\n\n"
+                                f"File A shape: `{df1_c.shape[0]} rows × {df1_c.shape[1]} columns` | "
+                                f"File B shape: `{df2_c.shape[0]} rows × {df2_c.shape[1]} columns`.\n\n"
+                                f"Try setting an Index Alignment Key above or use the Match tool."
+                            )
+                        else:
+                            diff = df1_c.compare(df2_c)
+                            if diff.empty:
+                                st.success("✅ Datasets are 100% identical across all overlapping fields!")
+                            else:
+                                st.warning(f"Detected {len(diff):,} row differences across common attributes.")
+                                st.dataframe(diff, use_container_width=True)
+
+                                output = io.BytesIO()
+                                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                                    diff.to_excel(writer)
+                                st.download_button("📥 Download Row Difference Log", data=output.getvalue(), file_name="Cell_Difference_Log.xlsx", use_container_width=True)
 
 # ==========================================
 # MODULE 4: POWER TOOLS & CONVERSION
