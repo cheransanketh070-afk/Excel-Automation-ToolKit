@@ -1,63 +1,53 @@
-# 🛠️ Excel Automation Toolkit Pro
+# ⚡ Excel Automation & Analytics Studio Pro
 
-**Excel Automation Toolkit Pro** is a high-performance web application built with Python, Streamlit, and Plotly. Designed for data analysts, marketers, operations teams, and finance professionals, it automates tedious spreadsheet scrubbing, batch transformations, dataset reconciliation, and executive chart generation—without requiring complex Excel formulas, VLOOKUPs, or VBA macros.
-
-The application features seamless monetization and access control powered by **Lemon Squeezy**, including license key validation, direct checkout routing, and built-in sample file testing.
+An enterprise-grade Streamlit suite for spreadsheet data cleaning, multi-file batch operations, VLOOKUP reconciliation, and interactive Plotly analytics.
 
 ---
 
-## 🌟 Key Features & Functional Modules
+## ✨ Features & Capabilities
 
-### 1. 🧹 Data Cleaning Studio
-* **Automated Data Scrubbing**: Eliminate blank rows, trim leading/trailing whitespace, and standardize text across entire worksheets.
-* **Smart Field Scrubbing**: Automatically extract and reformat phone numbers into standard US formats (`+1 (XXX) XXX-XXXX`) and clean invalid email addresses using regex pattern matching.
-* **Standardization**: Convert column headers into clean `snake_case` naming conventions and unify date formats (`YYYY-MM-DD`, `MM/DD/YYYY`, etc.).
-* **Deduplication**: Identify and remove duplicate records globally or based on targeted primary key columns.
+### 🧹 1. Data Cleaning Studio
+* **Automated Data Scrubbing**: Eliminate blank rows, duplicate entries, and unwanted whitespace.
+* **Smart Formatting**: Standardize text case (UPPERCASE, lowercase, Title Case) and column names to `snake_case`.
+* **Pattern Validation**: Format and validate email addresses and US phone numbers (`+1 (XXX) XXX-XXXX`).
+* **Date Standardization**: Unify inconsistent date strings across columns into standard formats (`YYYY-MM-DD`, `MM/DD/YYYY`).
 
-### 2. 🗂️ File & Batch Operations
-* **Merge Workbooks**: Concatenate multiple Excel (`.xlsx`) or CSV files into a single unified workbook with automatic source-file tracking.
-* **Split Utilities**: Automatically split large datasets into individual sheets or standalone workbooks by column category or transaction year.
-* **Batch Conversion**: Convert bulk CSV files into formatted Excel (`.xlsx`) workbooks packaged in a single ZIP archive.
-* **Column Extractor**: Select and isolate specific data columns across datasets into a clean export file.
+### 🗂️ 2. File & Batch Operations
+* **Merge Workbooks**: Concatenate multiple CSV/Excel files into a unified master dataset with source tracking.
+* **Batch Search & Replace**: Execute bulk string/value replacements across multi-file workbook archives.
+* **Categorical & Date Splitting**: Split massive sheets into separate workbooks based on unique column categories or transaction years.
+* **Format Conversion & Field Extraction**: Convert batch CSV files into formatted Excel workbooks or isolate specific columns into standalone files.
 
-### 3. 🔍 Dataset Matching & Sheet Comparison
-* **VLOOKUP/XLOOKUP Replacement**: Perform inner joins, left outer joins, or identify missing records between two separate datasets without formula overhead.
-* **Workbook Differencing**: Compare two versions of an Excel sheet cell-by-cell to highlight, track, and export modified values into a detailed difference log.
+### 🔍 3. Dataset Matching & Compare
+* **Multi-Table Joins**: Perform cross-workbook joins (Inner, Left, or Unmatched record isolation).
+* **Cell-by-Cell Reconciliation**: Compare two versions of a sheet to highlight precise row-and-column level differences.
 
-### 4. ⚡ Power Tools & Advanced Operations
-* **Filter & Search**: Query and slice complex workbooks using text containment filters and dynamic multi-column sorting.
-* **Batch Sheet Renaming**: Apply custom prefixes or suffixes across all worksheets within a multi-sheet workbook at once.
+### ⚡ 4. Power Tools & Custom Rules
+* **Multi-Column Filtering & Sorting**: Filter datasets by substring patterns and re-order records dynamically.
+* **Batch Worksheet Renaming**: Update tab titles across complex workbooks using custom prefixes and suffixes.
 
-### 5. 📊 Interactive Dashboard Studio *(New)*
-* **Executive KPI Cards**: Instantly compute and display key summary metrics including record counts, column dimensions, totals, and averages.
-* **6 Modern Visualizations**: Build interactive Plotly charts directly from uploaded datasets:
-  * Bar Charts (Category Aggregation)
-  * Line Charts (Trend & Time Series)
-  * Scatter Plots (Correlation Analysis with multi-variable color grouping)
-  * Pie & Donut Charts (Distribution percentages)
-  * Histograms (Frequency distributions)
-  * Heatmaps (Numeric correlation matrices)
+### 📊 5. Interactive Dashboard Studio & Analyzer
+* **KPI Metrics**: Modern glassmorphism stat cards for high-level aggregate overviews.
+* **Statistical Diagnostics**: Automated profiling including mean, median, standard deviation, skewness, min/max, and quantiles.
+* **Plotly Visualizations**: Interactive Bar Charts, Time Series Line Graphs, Scatter Plots, Donut/Pie Charts, Histograms, and Correlation Heatmaps.
 
 ---
 
-## 🔐 Licensing & Subscription Controls
+## 🔒 Licensing & Free Tier Access
 
-The app includes direct integration with **Lemon Squeezy** for software monetization:
-
-* **Live Key Validation**: Interacts with the Lemon Squeezy API (`v1/licenses/activate`) to verify customer license status.
-* **Embedded Checkout**: A native sidebar checkout button directs unsubscribed users to your active Lemon Squeezy store.
-* **Developer Bypass Mode**: Features an embedded test key (`TEST-GUM-7172504D6E9D`) for offline debugging and administrative overrides.
-* **Free Interactive Sample Mode**:
-  * Unsubscribed users can download pre-packaged test datasets (`01_Messy_Customer_Data.xlsx` and `02_Dataset_A_Customers.csv`) directly from the top banner to test all 5 modules risk-free.
-  * Uploading or processing custom proprietary files without an active license triggers a security gate warning.
+* **Free Tier / Sample Testing**: Free users can download and test all tools using built-in enterprise sample datasets (`Enterprise_Global_Sales_2026.xlsx` & `Enterprise_Customer_Master_2026.csv`).
+* **Pro Tier**: Uploading and processing custom user files is secured via Lemon Squeezy license key verification.
 
 ---
 
-## 📁 Repository Structure
+## 🚀 Quickstart Guide
 
-```text
-├── app.py                         # Complete Streamlit application code
-├── requirements.txt               # Python package dependencies
-├── 01_Messy_Customer_Data.xlsx    # Sample Excel file (Auto-generated fallback)
-├── 02_Dataset_A_Customers.csv     # Sample CSV file (Auto-generated fallback)
-└── README.md                      # Complete project documentation
+### 1. Prerequisites
+Ensure you have Python 3.9+ installed on your system.
+
+### 2. Installation
+Clone the repository and install the dependencies:
+
+```bash
+# Install required libraries
+pip install -r requirements.txt
