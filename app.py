@@ -1,8 +1,6 @@
 import os
 import re
 import io
-import sys
-from streamlit.web import cli as stcli
 import glob
 import zipfile
 from datetime import datetime, timedelta
@@ -1018,9 +1016,3 @@ elif module == "📊 Interactive Dashboard Studio":
                     st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.warning("Correlation Heatmaps require at least 2 numeric columns.")
-                    
-def handler(request, response):
-    sys.argv = ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]
-    stcli.main()
-
-app = handler
