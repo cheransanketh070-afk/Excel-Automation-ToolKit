@@ -21,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End Styling Injection
+# Custom High-End SaaS & Sidebar Styling Injection
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -34,6 +34,7 @@ st.markdown("""
         background-color: #F8FAFC;
     }
     
+    /* Executive Hero Header */
     .hero-container {
         background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
         padding: 2.2rem 2.5rem;
@@ -58,6 +59,60 @@ st.markdown("""
         margin-bottom: 0px;
     }
 
+    /* Professional Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #0F172A !important;
+        border-right: 1px solid #1E293B;
+    }
+
+    section[data-testid="stSidebar"] * {
+        color: #F1F5F9 !important;
+    }
+
+    .sidebar-header {
+        font-size: 1.3rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: #FFFFFF !important;
+        margin-bottom: 0.2rem;
+    }
+
+    .sidebar-badge {
+        display: inline-block;
+        background: rgba(37, 99, 235, 0.2);
+        border: 1px solid rgba(59, 130, 246, 0.4);
+        color: #60A5FA !important;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 20px;
+        margin-bottom: 1rem;
+    }
+
+    .sidebar-status-box {
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 0.85rem 1rem;
+        margin-top: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .sidebar-status-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94A3B8 !important;
+        margin-bottom: 0.25rem;
+    }
+
+    .sidebar-status-val {
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    /* KPI Cards */
     .kpi-card-container {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -94,7 +149,7 @@ st.markdown("""
     
     .stButton>button {
         background-color: #2563EB;
-        color: #FFFFFF;
+        color: #FFFFFF !important;
         font-weight: 600;
         border-radius: 8px;
         padding: 0.5rem 1.25rem;
@@ -119,21 +174,16 @@ st.markdown("""
 # ==========================================
 LEMON_SQUEEZY_API_URL = "https://api.lemonsqueezy.com/v1/licenses/activate"
 LEMON_SQUEEZY_CHECKOUT_URL = "https://yourstore.lemonsqueezy.com/checkout/buy/YOUR_PRODUCT_ID"
-PRIVATE_TEST_KEY = "TEST-GUM-7172504D6E9D"
 
-# New Modern Large Sample Datasets
 ALLOWED_SAMPLE_NAMES = [
     "Enterprise_Global_Sales_2026.xlsx",
     "Enterprise_Customer_Master_2026.csv"
 ]
 
 def verify_lemon_squeezy_license(license_key):
-    """Verifies user subscription key via Lemon Squeezy API or Developer Test Key."""
+    """Verifies user subscription key via Lemon Squeezy API."""
     if not license_key:
         return False, "No license key entered"
-
-    if license_key.strip() == PRIVATE_TEST_KEY:
-        return True, "Developer License Active (Pro Unlocked)"
 
     try:
         response = requests.post(
@@ -194,7 +244,6 @@ def generate_large_excel_sample():
 
     rows = []
     for i in range(1, n_rows + 1):
-        # Inject blank rows periodically to test blank row cleaner
         if i in [20, 100, 250, 500, 750, 950]:
             rows.append([np.nan] * 15)
             continue
@@ -202,7 +251,6 @@ def generate_large_excel_sample():
         trans_id = f" TR-2026-{(i % 800) + 1000:04d} "
         cust_name = names[i % len(names)]
         
-        # Email generation with deliberate formatting issues
         if i % 11 == 0:
             email = bad_emails[i % len(bad_emails)]
         else:
@@ -216,7 +264,6 @@ def generate_large_excel_sample():
         status = statuses[i % len(statuses)]
         sales_rep = reps[i % len(reps)]
         
-        # Rich numeric columns for Heatmaps, Scatter plots, and KPI cards
         units = int((i * 9 % 120) + 5)
         unit_price = round(float((i * 17 % 450) + 49.99), 2)
         total_revenue = round(units * unit_price, 2)
@@ -238,7 +285,6 @@ def generate_large_excel_sample():
     ]
     df = pd.DataFrame(rows, columns=cols)
 
-    # Inject duplicate records to test deduplication
     df = pd.concat([df, df.iloc[[10, 45, 120, 300, 550, 800]]], ignore_index=True)
 
     output = io.BytesIO()
@@ -253,12 +299,11 @@ def generate_large_csv_sample():
     regions = ["North America", "Europe", "Asia-Pacific", "Latin America", "Middle East"]
     tiers = ["Enterprise", "Mid-Market", "SMB", "Government", "Startup"]
     
-    # Overlapping IDs from CUST-1000 to CUST-2200 to ensure 100% successful VLOOKUP matches
     for i in range(1000, 2200):
         cust_id = f"CUST-{i:04d}"
         comp_name = f"Global Tech Corp {i}"
         reg = regions[i % len(regions)]
-        tier = tiers[i % len(tier)]
+        tier = tiers[i % len(tiers)]  # Fixed UnboundLocalError bug
         credit_limit = float((i * 2500) % 250000 + 15000)
         account_balance = round(credit_limit * 0.35 + (i * 12 % 5000), 2)
         churn_risk_score = round(float((i % 10) * 0.09), 2)
@@ -354,10 +399,10 @@ def execute_data_cleaning(df, opts):
     return df_clean, logs
 
 # ==========================================
-# SIDEBAR CONTROL PANEL
+# EXECUTIVE SIDEBAR CONTROL PANEL
 # ==========================================
-st.sidebar.markdown("## ⚡ Excel Toolkit Pro")
-st.sidebar.caption("Enterprise Data Automation Suite")
+st.sidebar.markdown('<div class="sidebar-header">⚡ Excel Toolkit Pro</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="sidebar-badge">v2.5 Enterprise Edition</div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🔑 License Activation")
@@ -368,13 +413,20 @@ if st.sidebar.button("Activate License Key", use_container_width=True):
     st.session_state.is_subscribed = is_valid
     st.session_state.license_msg = msg
 
-if st.session_state.is_subscribed:
-    st.sidebar.success(f"🟢 {st.session_state.license_msg}")
-else:
-    st.sidebar.warning(f"🔒 {st.session_state.license_msg}")
+status_color = "#10B981" if st.session_state.is_subscribed else "#F59E0B"
+status_icon = "🟢" if st.session_state.is_subscribed else "🔒"
+
+st.sidebar.markdown(f"""
+<div class="sidebar-status-box">
+    <div class="sidebar-status-title">Current Access Status</div>
+    <div class="sidebar-status-val" style="color: {status_color} !important;">{status_icon} {st.session_state.license_msg}</div>
+</div>
+""", unsafe_allow_html=True)
+
+if not st.session_state.is_subscribed:
     st.sidebar.markdown(
         f'<a href="{LEMON_SQUEEZY_CHECKOUT_URL}" target="_blank" style="text-decoration:none;">'
-        f'<button style="width:100%; background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color:#FFF; padding:10px; border-radius:8px; font-weight:600; border:none; cursor:pointer; margin-top:5px;">'
+        f'<button style="width:100%; background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color:#FFF !important; padding:10px; border-radius:8px; font-weight:600; border:none; cursor:pointer; margin-bottom:15px;">'
         f'🛒 Upgrade to Pro Version</button></a>',
         unsafe_allow_html=True
     )
@@ -393,7 +445,7 @@ module = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.caption("v2.5 Pro | 2026 Enterprise Edition")
+st.sidebar.caption("© 2026 Enterprise Analytics Studio")
 
 # ==========================================
 # HERO & FREE SAMPLE DOWNLOAD SECTION
@@ -434,7 +486,6 @@ btn2.download_button(
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Helper function to render subscription warning block
 def show_subscription_required_warning(filename=""):
     st.error(
         f"🔒 **Pro License Required for Custom Uploads**\n\n"
@@ -586,7 +637,6 @@ elif module == "🗂️ File & Batch Operations":
                             ext = f.name.split('.')[-1].lower()
                             df_temp = pd.read_csv(f) if ext == 'csv' else pd.read_excel(f)
                             
-                            # Perform string replacement across text columns
                             for col in df_temp.select_dtypes(include=['object', 'string']).columns:
                                 df_temp[col] = df_temp[col].astype(str).str.replace(search_str, replace_str, regex=False)
 
@@ -709,7 +759,6 @@ elif module == "🔍 Dataset Matching & Compare":
                 if not (is_allowed_file(f1) and is_allowed_file(f2)):
                     show_subscription_required_warning(f"{f1.name} / {f2.name}")
                 else:
-                    # Strip key strings for match accuracy
                     df1_match = df1.copy()
                     df2_match = df2.copy()
                     df1_match[key1] = df1_match[key1].astype(str).str.strip()
