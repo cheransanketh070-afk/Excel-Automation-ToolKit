@@ -2,7 +2,8 @@ import os
 import re
 import io
 import glob
-from datetime import datetime
+import zipfile
+from datetime import datetime, timedelta
 import requests
 import pandas as pd
 import numpy as np
@@ -11,22 +12,105 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # ==========================================
-# PAGE CONFIGURATION & STYLING
+# PAGE CONFIGURATION & MODERN SAAS STYLING
 # ==========================================
 st.set_page_config(
     page_title="Excel Automation Toolkit Pro",
-    page_icon="📊",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# Custom High-End Styling Injection
 st.markdown("""
     <style>
-    .main-header { font-size: 2.2rem; font-weight: 700; color: #1E293B; margin-bottom: 0.2rem; }
-    .sub-header { font-size: 1rem; color: #64748B; margin-bottom: 1.5rem; }
-    .stButton>button { background-color: #2563EB; color: white; border-radius: 6px; font-weight: 600; }
-    .metric-card { background-color: #F8FAFC; border: 1px solid #E2E8F0; padding: 1rem; border-radius: 8px; text-align: center; }
-    .sample-box { background-color: #EFF6FF; border: 1px solid #BFDBFE; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .main {
+        background-color: #F8FAFC;
+    }
+    
+    .hero-container {
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        padding: 2.2rem 2.5rem;
+        border-radius: 16px;
+        color: #FFFFFF;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+        margin-bottom: 2rem;
+    }
+    
+    .hero-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.4rem;
+        color: #FFFFFF;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.05rem;
+        color: #94A3B8;
+        font-weight: 400;
+        margin-bottom: 0px;
+    }
+
+    .kpi-card-container {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .kpi-card-container:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+    }
+    .kpi-title {
+        font-size: 0.825rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748B;
+        margin-bottom: 0.5rem;
+    }
+    .kpi-val {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #0F172A;
+    }
+
+    .free-banner {
+        background: linear-gradient(90deg, #EFF6FF 0%, #DBEAFE 100%);
+        border: 1px solid #BFDBFE;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stButton>button {
+        background-color: #2563EB;
+        color: #FFFFFF;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 0.5rem 1.25rem;
+        border: none;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+        transition: all 0.2s ease;
+    }
+    .stButton>button:hover {
+        background-color: #1D4ED8;
+        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+    }
+    
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -36,16 +120,20 @@ st.markdown("""
 LEMON_SQUEEZY_API_URL = "https://api.lemonsqueezy.com/v1/licenses/activate"
 LEMON_SQUEEZY_CHECKOUT_URL = "https://yourstore.lemonsqueezy.com/checkout/buy/YOUR_PRODUCT_ID"
 PRIVATE_TEST_KEY = "TEST-GUM-7172504D6E9D"
-ALLOWED_SAMPLE_NAMES = ["01_Messy_Customer_Data.xlsx", "02_Dataset_A_Customers.csv"]
+
+# New Modern Large Sample Datasets
+ALLOWED_SAMPLE_NAMES = [
+    "Enterprise_Global_Sales_2026.xlsx",
+    "Enterprise_Customer_Master_2026.csv"
+]
 
 def verify_lemon_squeezy_license(license_key):
     """Verifies user subscription key via Lemon Squeezy API or Developer Test Key."""
     if not license_key:
-        return False, "No key provided"
+        return False, "No license key entered"
 
-    # Private developer test key bypass
     if license_key.strip() == PRIVATE_TEST_KEY:
-        return True, "Developer Test Key Active (Unlimited Access)"
+        return True, "Developer License Active (Pro Unlocked)"
 
     try:
         response = requests.post(
@@ -56,21 +144,21 @@ def verify_lemon_squeezy_license(license_key):
         data = response.json()
         if response.status_code == 200 and data.get("activated", False):
             meta = data.get("meta", {})
-            return True, f"Subscription Active ({meta.get('customer_email', 'Verified User')})"
+            return True, f"License Verified ({meta.get('customer_email', 'Active Pro')})"
         else:
             error_msg = data.get("error", "Invalid or expired license key.")
             return False, error_msg
     except Exception as e:
-        return False, f"License server connection error: {str(e)}"
+        return False, f"License verification error: {str(e)}"
 
-# Initialize session license state
+# Initialize Session State
 if "is_subscribed" not in st.session_state:
     st.session_state.is_subscribed = False
 if "license_msg" not in st.session_state:
-    st.session_state.license_msg = "Unlicensed - Sample Mode Active"
+    st.session_state.license_msg = "Free Tier - Sample Datasets Only"
 
 def is_allowed_file(file_or_files):
-    """Checks if uploaded file is an allowed free sample file or if user has active key."""
+    """Enforces subscription requirement for custom uploaded files."""
     if st.session_state.is_subscribed:
         return True
     
@@ -83,42 +171,42 @@ def is_allowed_file(file_or_files):
     return file_or_files.name in ALLOWED_SAMPLE_NAMES
 
 # ==========================================
-# GENERATE ENHANCED LARGE SAMPLE FILES IF MISSING
+# HIGH-QUALITY LARGE SAMPLE DATASET GENERATORS
 # ==========================================
 @st.cache_data
-def get_sample_excel_bytes():
-    if os.path.exists("01_Messy_Customer_Data.xlsx"):
-        with open("01_Messy_Customer_Data.xlsx", "rb") as f:
-            return f.read()
-    
-    # Dynamic fallback generator with rich multi-column, multi-year dataset
+def generate_large_excel_sample():
+    """Generates a rich 1,000+ record dataset with 15 numeric/categorical/text columns."""
     np.random.seed(42)
+    n_rows = 1050
+
+    names = ["John Doe", "Sarah Connor", "Michael Scott", "Pam Beesly", "Dwight Schrute", 
+             "Jim Halpert", "Stanley Hudson", "Phyllis Vance", "Angela Martin", "Kevin Malone",
+             "Rachel Green", "Ross Geller", "Chandler Bing", "Monica Geller", "Joey Tribbiani"]
     
-    names = [" john DOE ", "SARAH connor", "michael scott ", "Pam Beesly", " Dwight Schrute ", "jim HALPERT", "Stanley Hudson", "Phyllis Vance", "Angela Martin", " Kevin Malone "]
-    domains = ["gmail.com", "yahoo.com", "dundermifflin.com", "sky.net", "hotmail.com"]
-    bad_emails = ["invalid_email_here", "pam.b@gmail..com", "dwight@dunder..com", "m.scott@dundermifflin"]
+    domains = ["gmail.com", "techcorp.io", "dundermifflin.com", "enterprise.org", "outlook.com"]
+    bad_emails = ["invalid_email_at_test", "pam.b@gmail..com", "dwight_dunder..com", "m.scott@office"]
     phones = ["1234567890", "+1 (987) 654-3210", "555-0199", "15550201122", "123 456 7890", "9876543210"]
-    dates = ["2021-03-15", "02/20/2022", "2023/12/05", "15-08-2024", "2025-01-10", "11/05/2021", "2022-09-30", "2023-04-18", "2024/06/25", "2025/02/14"]
-    regions = ["North", "South", "East", "West", "Central"]
-    categories = ["Technology", "Office Supplies", "Furniture", "Electronics", "Software"]
+    dates = ["2023-01-15", "02/20/2024", "2024/12/05", "15-08-2025", "2026-01-10", "11/05/2023", "2024-09-30", "2025-04-18"]
+    regions = ["North America", "Europe", "Asia-Pacific", "Latin America", "Middle East"]
+    categories = ["Enterprise Software", "Hardware", "Cloud Services", "Consulting", "Support Plans"]
     statuses = [" COMPLETED ", "pending", "CANCELLED", " Completed ", "Shipped", "Processing"]
-    sales_reps = ["Alice Smith", "Bob Jones", "Charlie Brown", "Diana Prince", "Evan Wright"]
+    reps = ["Alice Smith", "Bob Jones", "Charlie Brown", "Diana Prince", "Evan Wright"]
 
     rows = []
-    for i in range(1, 501):
-        # Inject blank rows periodically to test blank row removal
-        if i in [15, 45, 90, 150, 250, 380]:
-            rows.append([np.nan] * 14)
+    for i in range(1, n_rows + 1):
+        # Inject blank rows periodically to test blank row cleaner
+        if i in [20, 100, 250, 500, 750, 950]:
+            rows.append([np.nan] * 15)
             continue
 
-        cust_id = f" CUST-{(i % 150) + 101:03d} "
-        name = names[i % len(names)]
+        trans_id = f" TR-2026-{(i % 800) + 1000:04d} "
+        cust_name = names[i % len(names)]
         
-        # Mix valid and messy emails
-        if i % 7 == 0:
+        # Email generation with deliberate formatting issues
+        if i % 11 == 0:
             email = bad_emails[i % len(bad_emails)]
         else:
-            clean_n = name.strip().lower().replace(" ", ".")
+            clean_n = cust_name.lower().replace(" ", ".")
             email = f"{clean_n}@{domains[i % len(domains)]}"
 
         phone = phones[i % len(phones)]
@@ -126,56 +214,64 @@ def get_sample_excel_bytes():
         region = regions[i % len(regions)]
         category = categories[i % len(categories)]
         status = statuses[i % len(statuses)]
-        sales_rep = sales_reps[i % len(sales_reps)]
+        sales_rep = reps[i % len(reps)]
         
-        units = int((i * 7 % 80) + 1)
-        unit_price = round(float((i * 13 % 150) + 12.5), 2)
+        # Rich numeric columns for Heatmaps, Scatter plots, and KPI cards
+        units = int((i * 9 % 120) + 5)
+        unit_price = round(float((i * 17 % 450) + 49.99), 2)
         total_revenue = round(units * unit_price, 2)
-        profit = round(total_revenue * float(((i % 4) + 1) * 0.12), 2)
-        satisfaction_rating = round(float((i % 5) + 1), 1)
+        operational_cost = round(total_revenue * float(((i % 5) + 2) * 0.11), 2)
+        net_profit = round(total_revenue - operational_cost, 2)
+        discount_rate = round(float((i % 15) * 0.01), 2)
+        csat = round(float((i % 5) + 1.0), 1)
 
-        rows.append([cust_id, name, email, phone, reg_date, region, category, status, sales_rep, units, unit_price, total_revenue, profit, satisfaction_rating])
+        rows.append([
+            trans_id, cust_name, email, phone, reg_date, region, 
+            category, status, sales_rep, units, unit_price, 
+            total_revenue, operational_cost, net_profit, csat
+        ])
 
     cols = [
-        " Customer ID ", "Full Name", "Email Address", "Phone Number", 
-        "Registration Date", "Region", "Category", "Status", "Sales Rep", 
-        "Units Sold", "Unit Price", "Total Revenue", "Profit", "Satisfaction Rating"
+        " Transaction ID ", "Customer Name", "Email Address", "Phone Number", 
+        "Transaction Date", "Region", "Category", "Status", "Sales Rep", 
+        "Units Sold", "Unit Price", "Total Revenue", "Operational Cost", "Net Profit", "CSAT Score"
     ]
     df = pd.DataFrame(rows, columns=cols)
 
-    # Force duplicate rows to test deduplication
-    df = pd.concat([df, df.iloc[[5, 12, 25, 60, 100, 200, 300]]], ignore_index=True)
+    # Inject duplicate records to test deduplication
+    df = pd.concat([df, df.iloc[[10, 45, 120, 300, 550, 800]]], ignore_index=True)
 
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Customer_Data')
+        df.to_excel(writer, index=False, sheet_name='Global_Sales_Master')
     return output.getvalue()
 
 @st.cache_data
-def get_sample_csv_bytes():
-    if os.path.exists("02_Dataset_A_Customers.csv"):
-        with open("02_Dataset_A_Customers.csv", "rb") as f:
-            return f.read()
-            
-    # Dynamic fallback CSV generator with overlapping key IDs (CUST-101 to CUST-250)
+def generate_large_csv_sample():
+    """Generates a high-capacity CSV customer dataset designed for matching and joining."""
     rows = []
-    regions = ["North", "South", "East", "West", "Central"]
-    tier = ["Enterprise", "Mid-Market", "SMB", "Startup"]
+    regions = ["North America", "Europe", "Asia-Pacific", "Latin America", "Middle East"]
+    tiers = ["Enterprise", "Mid-Market", "SMB", "Government", "Startup"]
     
-    for i in range(101, 251):
-        cust_id = f"CUST-{i:03d}"
-        cust_name = f"Client Company {i}"
+    # Overlapping IDs from CUST-1000 to CUST-2200 to ensure 100% successful VLOOKUP matches
+    for i in range(1000, 2200):
+        cust_id = f"CUST-{i:04d}"
+        comp_name = f"Global Tech Corp {i}"
         reg = regions[i % len(regions)]
-        account_tier = tier[i % len(tier)]
-        credit_limit = (i * 1000) % 50000 + 10000
-        active_status = "Active" if i % 5 != 0 else "Inactive"
+        tier = tiers[i % len(tier)]
+        credit_limit = float((i * 2500) % 250000 + 15000)
+        account_balance = round(credit_limit * 0.35 + (i * 12 % 5000), 2)
+        churn_risk_score = round(float((i % 10) * 0.09), 2)
+        active_status = "Active" if i % 6 != 0 else "Inactive"
         
         rows.append({
             "CustomerID": cust_id,
-            "CustomerName": cust_name,
+            "CompanyName": comp_name,
             "Region": reg,
-            "AccountTier": account_tier,
+            "AccountTier": tier,
             "CreditLimit": credit_limit,
+            "AccountBalance": account_balance,
+            "ChurnRiskScore": churn_risk_score,
             "AccountStatus": active_status
         })
         
@@ -183,7 +279,7 @@ def get_sample_csv_bytes():
     return df.to_csv(index=False).encode('utf-8')
 
 # ==========================================
-# HELPER FUNCTIONS - DATA CLEANING
+# HELPER DATA CLEANING LOGIC
 # ==========================================
 def clean_phone_number(val):
     if pd.isna(val): return val
@@ -200,7 +296,7 @@ def clean_email_address(val):
     match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', val)
     return match.group(0) if match else np.nan
 
-def clean_dataset(df, opts):
+def execute_data_cleaning(df, opts):
     logs = {"initial_rows": len(df), "duplicates_removed": 0, "blanks_removed": 0, "errors": 0}
     df_clean = df.copy()
 
@@ -258,14 +354,16 @@ def clean_dataset(df, opts):
     return df_clean, logs
 
 # ==========================================
-# SIDEBAR NAVIGATION & SUBSCRIPTION GATE
+# SIDEBAR CONTROL PANEL
 # ==========================================
-st.sidebar.title("🛠️ Excel Toolkit Pro")
+st.sidebar.markdown("## ⚡ Excel Toolkit Pro")
+st.sidebar.caption("Enterprise Data Automation Suite")
 
-st.sidebar.markdown("### 🔑 Subscription & Licensing")
-input_key = st.sidebar.text_input("Lemon Squeezy Key", type="password", help="Enter your Lemon Squeezy license key")
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🔑 License Activation")
+input_key = st.sidebar.text_input("Lemon Squeezy License Key", type="password", help="Enter your product key to unlock custom file processing.")
 
-if st.sidebar.button("Activate License"):
+if st.sidebar.button("Activate License Key", use_container_width=True):
     is_valid, msg = verify_lemon_squeezy_license(input_key)
     st.session_state.is_subscribed = is_valid
     st.session_state.license_msg = msg
@@ -273,106 +371,123 @@ if st.sidebar.button("Activate License"):
 if st.session_state.is_subscribed:
     st.sidebar.success(f"🟢 {st.session_state.license_msg}")
 else:
-    st.sidebar.warning(f"🔴 {st.session_state.license_msg}")
+    st.sidebar.warning(f"🔒 {st.session_state.license_msg}")
     st.sidebar.markdown(
         f'<a href="{LEMON_SQUEEZY_CHECKOUT_URL}" target="_blank" style="text-decoration:none;">'
-        f'<button style="width:100%; background-color:#FFC233; color:#000; padding:8px; border-radius:6px; font-weight:bold; border:none; cursor:pointer; margin-top:5px;">'
-        f'💳 Subscribe to Access Toolkit</button></a>',
+        f'<button style="width:100%; background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color:#FFF; padding:10px; border-radius:8px; font-weight:600; border:none; cursor:pointer; margin-top:5px;">'
+        f'🛒 Upgrade to Pro Version</button></a>',
         unsafe_allow_html=True
     )
 
 st.sidebar.markdown("---")
 
 module = st.sidebar.radio(
-    "Select Module",
+    "Navigation Modules",
     [
-        "Data Cleaning Studio",
-        "File & Batch Operations",
-        "Dataset Matching & Compare",
-        "Power Tools & Conversion",
-        "Interactive Dashboard Studio"
+        "🧹 Data Cleaning Studio",
+        "🗂️ File & Batch Operations",
+        "🔍 Dataset Matching & Compare",
+        "⚡ Power Tools & Conversion",
+        "📊 Interactive Dashboard Studio"
     ]
 )
 
 st.sidebar.markdown("---")
-st.sidebar.caption("Excel Automation Toolkit v1.2 | Free Sample Mode Enabled")
+st.sidebar.caption("v2.5 Pro | 2026 Enterprise Edition")
 
 # ==========================================
-# FREE SAMPLE FILE DOWNLOAD BANNER
+# HERO & FREE SAMPLE DOWNLOAD SECTION
 # ==========================================
 st.markdown("""
-<div class="sample-box">
-    <h4>📁 Test the Toolkit for Free</h4>
-    <p style="margin-bottom:0.8rem; color:#475569;">No subscription? Download these sample files to test all tools. Custom file processing requires an active subscription.</p>
+<div class="hero-container">
+    <div class="hero-title">Excel Automation & Analytics Studio Pro</div>
+    <p class="hero-subtitle">High-performance spreadsheet scrubbing, multi-file batch operations, reconciliation, and automated dashboard generation.</p>
 </div>
 """, unsafe_allow_html=True)
 
-sc1, sc2, _ = st.columns([1, 1, 2])
+st.markdown("""
+<div class="free-banner">
+    <div style="font-weight:700; font-size:1.05rem; color:#1E3A8A; margin-bottom:0.3rem;">⚡ Test Drive Free Sample Datasets</div>
+    <div style="font-size:0.9rem; color:#3B82F6; margin-bottom:0.8rem;">
+        No active license? Download our new 1,000+ record sample datasets below to test all tools, cleanings, and visualization studios for free. Custom file processing requires a Pro license key.
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-sc1.download_button(
-    label="📥 Download Sample Excel Data",
-    data=get_sample_excel_bytes(),
-    file_name="01_Messy_Customer_Data.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+btn1, btn2, _ = st.columns([1.2, 1.2, 1.6])
+
+btn1.download_button(
+    label="📥 Excel Data (1,000+ Rows)",
+    data=generate_large_excel_sample(),
+    file_name="Enterprise_Global_Sales_2026.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    use_container_width=True
 )
 
-sc2.download_button(
-    label="📥 Download Sample CSV Data",
-    data=get_sample_csv_bytes(),
-    file_name="02_Dataset_A_Customers.csv",
-    mime="text/csv"
+btn2.download_button(
+    label="📥 CSV Data (1,200 Rows)",
+    data=generate_large_csv_sample(),
+    file_name="Enterprise_Customer_Master_2026.csv",
+    mime="text/csv",
+    use_container_width=True
 )
 
-st.markdown("---")
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Helper function to render subscription warning block
+def show_subscription_required_warning(filename=""):
+    st.error(
+        f"🔒 **Pro License Required for Custom Uploads**\n\n"
+        f"Processing custom files like `{filename}` requires an active Pro license. "
+        f"Please enter your Lemon Squeezy license key in the sidebar, or test the tool for free using the sample datasets downloaded above."
+    )
 
 # ==========================================
 # MODULE 1: DATA CLEANING STUDIO
 # ==========================================
-if module == "Data Cleaning Studio":
-    st.markdown('<div class="main-header">Data Cleaning Studio</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Automate repetitive scrubbing, formatting, and standardizing tasks in seconds.</div>', unsafe_allow_html=True)
+if module == "🧹 Data Cleaning Studio":
+    st.markdown("### 🧹 Data Cleaning Studio")
+    st.caption("Automate data scrubbing, standardizations, deduplication, and pattern cleanings.")
 
-    uploaded_file = st.file_uploader("Upload Excel or CSV file", type=["xlsx", "xls", "csv"])
+    uploaded_file = st.file_uploader("Upload File (Excel or CSV)", type=["xlsx", "xls", "csv"])
 
     if uploaded_file:
         file_ext = uploaded_file.name.split('.')[-1].lower()
-        if file_ext == 'csv':
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file)
+        df = pd.read_csv(uploaded_file) if file_ext == 'csv' else pd.read_excel(uploaded_file)
 
-        st.subheader("Data Preview")
-        st.dataframe(df.head(5), use_container_width=True)
+        st.markdown("#### Raw Dataset Preview")
+        st.dataframe(df.head(6), use_container_width=True)
 
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.markdown("### Basic Cleaning")
+            st.markdown("##### Basic Scrubbing")
             rem_dupes = st.checkbox("Remove Duplicate Records", value=True)
             rem_blanks = st.checkbox("Remove Entirely Blank Rows", value=True)
-            trim_sp = st.checkbox("Trim Unnecessary Spaces", value=True)
-            std_cols = st.checkbox("Standardize Column Names (snake_case)", value=False)
+            trim_sp = st.checkbox("Trim Whitespace Across All Cells", value=True)
+            std_cols = st.checkbox("Convert Column Names to snake_case", value=False)
 
         with col2:
-            st.markdown("### Text & Capitalization")
-            cap_type = st.selectbox("Capitalization Standard", ["None", "UPPERCASE", "lowercase", "Title Case"])
-            clean_em = st.checkbox("Scrub Email Addresses")
-            email_cols = st.multiselect("Select Email Columns", df.columns) if clean_em else []
+            st.markdown("##### Formatting & Formatting")
+            cap_type = st.selectbox("Text Capitalization Standard", ["None", "UPPERCASE", "lowercase", "Title Case"])
+            clean_em = st.checkbox("Format & Validate Email Addresses")
+            email_cols = st.multiselect("Target Email Columns", df.columns) if clean_em else []
 
-            clean_ph = st.checkbox("Scrub & Format Phone Numbers")
-            phone_cols = st.multiselect("Select Phone Columns", df.columns) if clean_ph else []
+            clean_ph = st.checkbox("Standardize Phone Numbers (+1 US Format)")
+            phone_cols = st.multiselect("Target Phone Columns", df.columns) if clean_ph else []
 
         with col3:
-            st.markdown("### Dates & Missing Values")
-            std_dt = st.checkbox("Standardize Date Formats")
-            date_cols = st.multiselect("Select Date Columns", df.columns) if std_dt else []
+            st.markdown("##### Dates & Subset Rules")
+            std_dt = st.checkbox("Standardize Date Column Formats")
+            date_cols = st.multiselect("Target Date Columns", df.columns) if std_dt else []
             dt_fmt = st.selectbox("Output Date Format", ["%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"]) if std_dt else "%Y-%m-%d"
 
-            dupe_sub = st.multiselect("Check Duplicates Based On Specific Columns", df.columns) if rem_dupes else []
+            dupe_sub = st.multiselect("Deduplicate Based On Unique Key Column(s)", df.columns) if rem_dupes else []
 
-        if st.button("⚡ Run Cleaning Pipeline", use_container_width=True):
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("⚡ Execute Cleaning Pipeline", use_container_width=True):
             if not is_allowed_file(uploaded_file):
-                st.error(f"❌ '{uploaded_file.name}' is blocked in free mode. Free users can only process allowed sample files ('01_Messy_Customer_Data.xlsx' or '02_Dataset_A_Customers.csv'). Please subscribe to process custom files.")
+                show_subscription_required_warning(uploaded_file.name)
             else:
                 options = {
                     'remove_duplicates': rem_dupes,
@@ -390,84 +505,110 @@ if module == "Data Cleaning Studio":
                     'duplicate_subset': dupe_sub
                 }
 
-                cleaned_df, report = clean_dataset(df, options)
+                cleaned_df, report = execute_data_cleaning(df, options)
                 st.success("Cleaning Pipeline Executed Successfully!")
 
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Original Rows", report["initial_rows"])
-                m2.metric("Cleaned Rows", report["final_rows"])
+                m1.metric("Original Rows", f"{report['initial_rows']:,}")
+                m2.metric("Cleaned Rows", f"{report['final_rows']:,}")
                 m3.metric("Duplicates Removed", report["duplicates_removed"])
                 m4.metric("Blank Rows Removed", report["blanks_removed"])
 
-                st.subheader("Cleaned Dataset Preview")
+                st.markdown("#### Cleaned Dataset Preview")
                 st.dataframe(cleaned_df.head(10), use_container_width=True)
 
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     cleaned_df.to_excel(writer, index=False, sheet_name='Cleaned_Data')
-                processed_data = output.getvalue()
 
-                out_name = f"Cleaned_{uploaded_file.name.split('.')[0]}.xlsx"
                 st.download_button(
-                    label="📥 Download Cleaned Excel File",
-                    data=processed_data,
-                    file_name=out_name,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    label="📥 Download Cleaned Excel Dataset",
+                    data=output.getvalue(),
+                    file_name=f"Cleaned_{uploaded_file.name.split('.')[0]}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
                 )
 
 # ==========================================
 # MODULE 2: FILE & BATCH OPERATIONS
 # ==========================================
-elif module == "File & Batch Operations":
-    st.markdown('<div class="main-header">File & Batch Operations</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Merge, split, extract, and convert multi-file datasets automatically.</div>', unsafe_allow_html=True)
+elif module == "🗂️ File & Batch Operations":
+    st.markdown("### 🗂️ File & Batch Operations")
+    st.caption("Merge, split, extract, and bulk transform spreadsheet workbooks.")
 
     action = st.selectbox(
-        "Select Operation",
+        "Select Operation Tool",
         [
             "Merge Multiple Excel/CSV Files",
-            "Split Workbook by Column Value",
-            "Split Workbook by Year",
+            "Batch Text Search & Replace Across Files",
+            "Split Workbook by Column Category",
+            "Split Workbook by Transaction Year",
             "Batch CSV → Excel Converter",
-            "Extract Specific Columns"
+            "Column Extraction Utility"
         ]
     )
 
     if action == "Merge Multiple Excel/CSV Files":
-        files = st.file_uploader("Upload Files to Combine", type=["csv", "xlsx", "xls"], accept_multiple_files=True)
+        files = st.file_uploader("Upload Workbooks to Combine", type=["csv", "xlsx", "xls"], accept_multiple_files=True)
         if files:
-            if st.button("Combine Files"):
+            if st.button("Combine Files Into Master Workbook"):
                 if not is_allowed_file(files):
-                    st.error("❌ Custom multi-file merges require an active subscription. Only sample test files can be processed without a key.")
+                    show_subscription_required_warning("Batch Upload Group")
                 else:
                     dfs = []
                     for f in files:
                         ext = f.name.split('.')[-1].lower()
                         df_temp = pd.read_csv(f) if ext == 'csv' else pd.read_excel(f)
-                        df_temp['Source_File'] = f.name
+                        df_temp['Source_Workbook'] = f.name
                         dfs.append(df_temp)
                     merged_df = pd.concat(dfs, ignore_index=True)
-                    st.success(f"Successfully merged {len(files)} files into {len(merged_df)} records!")
+                    st.success(f"Successfully merged {len(files)} files into {len(merged_df):,} combined records!")
 
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        merged_df.to_excel(writer, index=False, sheet_name='Merged_Data')
-                    st.download_button("📥 Download Merged File", data=output.getvalue(), file_name="Merged_Dataset.xlsx")
+                        merged_df.to_excel(writer, index=False, sheet_name='Merged_Master')
+                    st.download_button("📥 Download Merged Dataset", data=output.getvalue(), file_name="Merged_Master_Workbook.xlsx", use_container_width=True)
 
-    elif action == "Split Workbook by Column Value":
+    elif action == "Batch Text Search & Replace Across Files":
+        files = st.file_uploader("Upload Files for Batch Replacement", type=["csv", "xlsx"], accept_multiple_files=True)
+        if files:
+            col_search, col_replace = st.columns(2)
+            search_str = col_search.text_input("Text / String to Find")
+            replace_str = col_replace.text_input("Replacement Value")
+
+            if search_str and st.button("Run Batch Replacement"):
+                if not is_allowed_file(files):
+                    show_subscription_required_warning("Batch Files Group")
+                else:
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+                        for f in files:
+                            ext = f.name.split('.')[-1].lower()
+                            df_temp = pd.read_csv(f) if ext == 'csv' else pd.read_excel(f)
+                            
+                            # Perform string replacement across text columns
+                            for col in df_temp.select_dtypes(include=['object', 'string']).columns:
+                                df_temp[col] = df_temp[col].astype(str).str.replace(search_str, replace_str, regex=False)
+
+                            out_b = io.BytesIO()
+                            with pd.ExcelWriter(out_b, engine='openpyxl') as writer:
+                                df_temp.to_excel(writer, index=False, sheet_name='Updated_Data')
+                            zip_file.writestr(f"Updated_{f.name.rsplit('.', 1)[0]}.xlsx", out_b.getvalue())
+
+                    st.success("Batch replacement completed across all files!")
+                    st.download_button("📥 Download Updated Files (.zip)", data=zip_buffer.getvalue(), file_name="Batch_Updated_Files.zip", use_container_width=True)
+
+    elif action == "Split Workbook by Column Category":
         uploaded_file = st.file_uploader("Upload File to Split", type=["xlsx", "csv"])
         if uploaded_file:
             df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
-            split_col = st.selectbox("Select Column to Split By", df.columns)
+            split_col = st.selectbox("Select Splitting Key Column", df.columns)
 
-            if st.button("Generate Split Files"):
+            if st.button("Generate Categorical Split Archive"):
                 if not is_allowed_file(uploaded_file):
-                    st.error("❌ Custom file splitting requires an active subscription. Please upload an allowed sample file or subscribe.")
+                    show_subscription_required_warning(uploaded_file.name)
                 else:
                     unique_vals = df[split_col].dropna().unique()
-                    st.info(f"Generating {len(unique_vals)} split outputs...")
-
-                    import zipfile
                     zip_buffer = io.BytesIO()
                     with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
                         for val in unique_vals:
@@ -478,23 +619,22 @@ elif module == "File & Batch Operations":
                             clean_val_str = re.sub(r'[^\w\-_\. ]', '_', str(val))
                             zip_file.writestr(f"Split_{split_col}_{clean_val_str}.xlsx", out_b.getvalue())
 
-                    st.success(f"Split complete! {len(unique_vals)} files packaged.")
-                    st.download_button("📥 Download All Split Files (.zip)", data=zip_buffer.getvalue(), file_name="Split_Files.zip")
+                    st.success(f"Split complete! {len(unique_vals)} standalone workbooks generated.")
+                    st.download_button("📥 Download Split Archive (.zip)", data=zip_buffer.getvalue(), file_name="Categorical_Split_Archive.zip", use_container_width=True)
 
-    elif action == "Split Workbook by Year":
+    elif action == "Split Workbook by Transaction Year":
         uploaded_file = st.file_uploader("Upload File", type=["xlsx", "csv"])
         if uploaded_file:
             df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
             date_col = st.selectbox("Select Date Column", df.columns)
 
-            if st.button("Split by Year"):
+            if st.button("Execute Split by Year"):
                 if not is_allowed_file(uploaded_file):
-                    st.error("❌ Custom file splitting requires an active subscription.")
+                    show_subscription_required_warning(uploaded_file.name)
                 else:
                     df['__Temp_Year'] = pd.to_datetime(df[date_col], errors='coerce').dt.year
                     years = df['__Temp_Year'].dropna().unique()
 
-                    import zipfile
                     zip_buffer = io.BytesIO()
                     with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
                         for y in years:
@@ -504,100 +644,106 @@ elif module == "File & Batch Operations":
                                 sub_df.to_excel(writer, index=False, sheet_name=str(int(y)))
                             zip_file.writestr(f"Data_Year_{int(y)}.xlsx", out_b.getvalue())
 
-                    st.download_button("📥 Download Year-Split Files (.zip)", data=zip_buffer.getvalue(), file_name="Split_By_Year.zip")
+                    st.success("Successfully generated annual files!")
+                    st.download_button("📥 Download Year Split Archive (.zip)", data=zip_buffer.getvalue(), file_name="Year_Split_Files.zip", use_container_width=True)
 
     elif action == "Batch CSV → Excel Converter":
         files = st.file_uploader("Upload CSV Files", type=["csv"], accept_multiple_files=True)
-        if files and st.button("Convert to Excel"):
+        if files and st.button("Convert All CSVs to Formatted Excel"):
             if not is_allowed_file(files):
-                st.error("❌ Batch CSV conversion for custom files requires an active subscription.")
+                show_subscription_required_warning("CSV Conversion Group")
             else:
-                import zipfile
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
                     for f in files:
-                        df = pd.read_csv(f)
+                        df_c = pd.read_csv(f)
                         out_b = io.BytesIO()
                         with pd.ExcelWriter(out_b, engine='openpyxl') as writer:
-                            df.to_excel(writer, index=False, sheet_name='Data')
+                            df_c.to_excel(writer, index=False, sheet_name='Sheet1')
                         base_name = f.name.rsplit('.', 1)[0]
                         zip_file.writestr(f"{base_name}.xlsx", out_b.getvalue())
-                st.download_button("📥 Download Converted Excel Files (.zip)", data=zip_buffer.getvalue(), file_name="Converted_Excel_Files.zip")
+                st.download_button("📥 Download Converted Excel Workbooks (.zip)", data=zip_buffer.getvalue(), file_name="Batch_Converted_Excel.zip", use_container_width=True)
 
-    elif action == "Extract Specific Columns":
+    elif action == "Column Extraction Utility":
         uploaded_file = st.file_uploader("Upload File", type=["xlsx", "csv"])
         if uploaded_file:
             df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
-            selected_cols = st.multiselect("Select Columns to Extract", df.columns)
-            if selected_cols and st.button("Extract Data"):
+            selected_cols = st.multiselect("Select Target Columns to Isolate", df.columns)
+            if selected_cols and st.button("Extract & Download Selected Fields"):
                 if not is_allowed_file(uploaded_file):
-                    st.error("❌ Extracting columns from custom files requires an active subscription.")
+                    show_subscription_required_warning(uploaded_file.name)
                 else:
                     extracted_df = df[selected_cols]
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
                         extracted_df.to_excel(writer, index=False)
-                    st.download_button("📥 Download Extracted Columns", data=output.getvalue(), file_name="Extracted_Columns.xlsx")
+                    st.download_button("📥 Download Extracted Fields File", data=output.getvalue(), file_name="Extracted_Columns.xlsx", use_container_width=True)
 
 # ==========================================
 # MODULE 3: DATASET MATCHING & COMPARE
 # ==========================================
-elif module == "Dataset Matching & Compare":
-    st.markdown('<div class="main-header">Dataset Matching & Sheet Comparison</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Reconcile datasets, find missing records, and spot cross-file duplicates.</div>', unsafe_allow_html=True)
+elif module == "🔍 Dataset Matching & Compare":
+    st.markdown("### 🔍 Dataset Matching & Sheet Reconciliation")
+    st.caption("Perform multi-table joins, cross-workbook VLOOKUP reconciliation, and row-level diff tracking.")
 
-    mode = st.radio("Select Workflow", ["Match Two Datasets (VLOOKUP Replacement)", "Compare Two Excel Files / Sheets"])
+    mode = st.radio("Select Reconciliation Tool", ["Match Two Datasets (VLOOKUP / Join Engine)", "Compare Two Excel Files Cell-by-Cell"])
 
-    if mode == "Match Two Datasets (VLOOKUP Replacement)":
+    if mode == "Match Two Datasets (VLOOKUP / Join Engine)":
         c1, c2 = st.columns(2)
         with c1:
             f1 = st.file_uploader("Upload Primary File (Dataset A)", type=["xlsx", "csv"], key="m_f1")
         with c2:
-            f2 = st.file_uploader("Upload Secondary File (Dataset B)", type=["xlsx", "csv"], key="m_f2")
+            f2 = st.file_uploader("Upload Reference File (Dataset B)", type=["xlsx", "csv"], key="m_f2")
 
         if f1 and f2:
             df1 = pd.read_csv(f1) if f1.name.endswith('.csv') else pd.read_excel(f1)
             df2 = pd.read_csv(f2) if f2.name.endswith('.csv') else pd.read_excel(f2)
 
             col_a, col_b = st.columns(2)
-            key1 = col_a.selectbox("Matching Key column in Dataset A", df1.columns)
-            key2 = col_b.selectbox("Matching Key column in Dataset B", df2.columns)
+            key1 = col_a.selectbox("Primary Match Key (Dataset A)", df1.columns)
+            key2 = col_b.selectbox("Reference Match Key (Dataset B)", df2.columns)
 
-            join_type = st.selectbox("Match Type", ["Inner Join (Records in Both)", "Left Join (Keep All Dataset A)", "Find Missing in Dataset B"])
+            join_type = st.selectbox("Join Algorithm", ["Inner Join (Matched Records Only)", "Left Join (Retain All Dataset A)", "Find Unmatched Keys in Dataset A"])
 
-            if st.button("Execute Match"):
+            if st.button("Execute Dataset Match", use_container_width=True):
                 if not (is_allowed_file(f1) and is_allowed_file(f2)):
-                    st.error("❌ Matching custom datasets requires an active subscription. Please subscribe to execute custom file matches.")
+                    show_subscription_required_warning(f"{f1.name} / {f2.name}")
                 else:
-                    if join_type == "Inner Join (Records in Both)":
-                        res = pd.merge(df1, df2, left_on=key1, right_on=key2, how='inner', suffixes=('_A', '_B'))
-                    elif join_type == "Left Join (Keep All Dataset A)":
-                        res = pd.merge(df1, df2, left_on=key1, right_on=key2, how='left', suffixes=('_A', '_B'))
-                    else:
-                        res = df1[~df1[key1].isin(df2[key2])]
+                    # Strip key strings for match accuracy
+                    df1_match = df1.copy()
+                    df2_match = df2.copy()
+                    df1_match[key1] = df1_match[key1].astype(str).str.strip()
+                    df2_match[key2] = df2_match[key2].astype(str).str.strip()
 
-                    st.success(f"Matched {len(res)} total records.")
+                    if join_type == "Inner Join (Matched Records Only)":
+                        res = pd.merge(df1_match, df2_match, left_on=key1, right_on=key2, how='inner', suffixes=('_A', '_B'))
+                    elif join_type == "Left Join (Retain All Dataset A)":
+                        res = pd.merge(df1_match, df2_match, left_on=key1, right_on=key2, how='left', suffixes=('_A', '_B'))
+                    else:
+                        res = df1_match[~df1_match[key1].isin(df2_match[key2])]
+
+                    st.success(f"Matched {len(res):,} records!")
                     st.dataframe(res.head(10), use_container_width=True)
 
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
                         res.to_excel(writer, index=False)
-                    st.download_button("📥 Download Match Report", data=output.getvalue(), file_name="Matched_Output.xlsx")
+                    st.download_button("📥 Download Reconciled Dataset", data=output.getvalue(), file_name="Dataset_Match_Report.xlsx", use_container_width=True)
 
-    elif mode == "Compare Two Excel Files / Sheets":
+    elif mode == "Compare Two Excel Files Cell-by-Cell":
         c1, c2 = st.columns(2)
         with c1:
-            f1 = st.file_uploader("Upload File A (Original)", type=["xlsx", "csv"], key="c_f1")
+            f1 = st.file_uploader("Original File A", type=["xlsx", "csv"], key="c_f1")
         with c2:
-            f2 = st.file_uploader("Upload File B (Modified)", type=["xlsx", "csv"], key="c_f2")
+            f2 = st.file_uploader("Modified File B", type=["xlsx", "csv"], key="c_f2")
 
         if f1 and f2:
             df1 = pd.read_csv(f1) if f1.name.endswith('.csv') else pd.read_excel(f1)
             df2 = pd.read_csv(f2) if f2.name.endswith('.csv') else pd.read_excel(f2)
 
-            if st.button("Compare Sheets"):
+            if st.button("Run Cell-by-Cell Comparison", use_container_width=True):
                 if not (is_allowed_file(f1) and is_allowed_file(f2)):
-                    st.error("❌ Comparing custom files requires an active subscription.")
+                    show_subscription_required_warning(f"{f1.name} / {f2.name}")
                 else:
                     common_cols = list(set(df1.columns).intersection(set(df2.columns)))
                     df1_c = df1[common_cols]
@@ -605,69 +751,69 @@ elif module == "Dataset Matching & Compare":
 
                     diff = df1_c.compare(df2_c)
                     if diff.empty:
-                        st.success("The files are identical across common columns!")
+                        st.success("✅ Datasets are 100% identical across all overlapping fields!")
                     else:
-                        st.warning(f"Found {len(diff)} cell differences between files.")
+                        st.warning(f"Detected {len(diff):,} row differences across common attributes.")
                         st.dataframe(diff, use_container_width=True)
 
                         output = io.BytesIO()
                         with pd.ExcelWriter(output, engine='openpyxl') as writer:
                             diff.to_excel(writer)
-                        st.download_button("📥 Download Difference Log", data=output.getvalue(), file_name="Comparison_Diff_Log.xlsx")
+                        st.download_button("📥 Download Row Difference Log", data=output.getvalue(), file_name="Cell_Difference_Log.xlsx", use_container_width=True)
 
 # ==========================================
 # MODULE 4: POWER TOOLS & CONVERSION
 # ==========================================
-elif module == "Power Tools & Conversion":
-    st.markdown('<div class="main-header">Power Tools & Advanced Operations</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Filter, sort, and batch rename worksheets inside workbooks.</div>', unsafe_allow_html=True)
+elif module == "⚡ Power Tools & Conversion":
+    st.markdown("### ⚡ Power Tools & Advanced Operations")
+    st.caption("Execute complex text filters, multi-column sorting, and bulk tab renames.")
 
-    p_action = st.selectbox("Select Tool", ["Filter & Sort Records", "Batch Rename Worksheets"])
+    p_action = st.selectbox("Select Utility Tool", ["Filter & Multi-Column Sorting", "Batch Rename Excel Worksheets"])
 
-    if p_action == "Filter & Sort Records":
+    if p_action == "Filter & Multi-Column Sorting":
         uploaded_file = st.file_uploader("Upload File", type=["xlsx", "csv"])
         if uploaded_file:
             df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
 
             c1, c2 = st.columns(2)
-            filter_col = c1.selectbox("Filter Column", ["None"] + list(df.columns))
-            sort_col = c2.selectbox("Sort Column", ["None"] + list(df.columns))
+            filter_col = c1.selectbox("Filter Column Target", ["None"] + list(df.columns))
+            sort_col = c2.selectbox("Sort Priority Column", ["None"] + list(df.columns))
 
             filtered_df = df.copy()
 
             if filter_col != "None":
-                val = st.text_input(f"Filter value for '{filter_col}' (contains text)")
+                val = st.text_input(f"Substring Match for '{filter_col}'")
                 if val:
                     filtered_df = filtered_df[filtered_df[filter_col].astype(str).str.contains(val, case=False, na=False)]
 
             if sort_col != "None":
-                ascending = st.checkbox("Ascending Order", value=True)
+                ascending = st.checkbox("Sort Ascending", value=True)
                 filtered_df = filtered_df.sort_values(by=sort_col, ascending=ascending)
 
             st.dataframe(filtered_df.head(10), use_container_width=True)
 
-            if st.button("Download Result"):
+            if st.button("Export Processed Data"):
                 if not is_allowed_file(uploaded_file):
-                    st.error("❌ Exporting processed custom data requires an active subscription.")
+                    show_subscription_required_warning(uploaded_file.name)
                 else:
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
                         filtered_df.to_excel(writer, index=False)
-                    st.download_button("📥 Download Filtered/Sorted Data", data=output.getvalue(), file_name="Filtered_Sorted_Data.xlsx")
+                    st.download_button("📥 Download Filtered Dataset", data=output.getvalue(), file_name="Filtered_Sorted_Export.xlsx", use_container_width=True)
 
-    elif p_action == "Batch Rename Worksheets":
+    elif p_action == "Batch Rename Excel Worksheets":
         uploaded_file = st.file_uploader("Upload Multi-Sheet Excel File", type=["xlsx"])
         if uploaded_file:
             xl = pd.ExcelFile(uploaded_file)
             sheet_names = xl.sheet_names
-            st.write("Current Sheets:", sheet_names)
+            st.info(f"Detected {len(sheet_names)} worksheets: {', '.join(sheet_names)}")
 
-            prefix = st.text_input("Add Prefix to All Sheets", value="")
-            suffix = st.text_input("Add Suffix to All Sheets", value="")
+            prefix = st.text_input("Add Prefix to All Tab Names", value="")
+            suffix = st.text_input("Add Suffix to All Tab Names", value="")
 
-            if st.button("Rename Sheets"):
+            if st.button("Execute Tab Renaming"):
                 if not is_allowed_file(uploaded_file):
-                    st.error("❌ Renaming worksheets in custom files requires an active subscription.")
+                    show_subscription_required_warning(uploaded_file.name)
                 else:
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -675,127 +821,198 @@ elif module == "Power Tools & Conversion":
                             df_s = pd.read_excel(uploaded_file, sheet_name=s)
                             new_name = f"{prefix}{s}{suffix}"[:31]
                             df_s.to_excel(writer, sheet_name=new_name, index=False)
-                    st.success("Worksheets renamed successfully!")
-                    st.download_button("📥 Download Renamed Workbook", data=output.getvalue(), file_name="Renamed_Sheets.xlsx")
+                    st.success("Worksheet tab names updated!")
+                    st.download_button("📥 Download Renamed Workbook", data=output.getvalue(), file_name="Renamed_Tabs_Workbook.xlsx", use_container_width=True)
 
 # ==========================================
-# MODULE 5: INTERACTIVE DASHBOARD STUDIO
+# MODULE 5: INTERACTIVE DASHBOARD STUDIO & ANALYZER
 # ==========================================
-elif module == "Interactive Dashboard Studio":
-    st.markdown('<div class="main-header">Interactive Dashboard Studio</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Transform datasets into clean, executive-ready analytical dashboards automatically.</div>', unsafe_allow_html=True)
+elif module == "📊 Interactive Dashboard Studio":
+    st.markdown("### 📊 Interactive Dashboard Studio & Advanced Analyzer")
+    st.caption("Generate executive metrics, comprehensive statistical diagnostics, and Plotly visualizations.")
 
-    uploaded_file = st.file_uploader("Upload Excel or CSV file for Dashboard Generation", type=["xlsx", "csv"], key="dash_file")
+    uploaded_file = st.file_uploader("Upload Excel or CSV File for Analytics", type=["xlsx", "csv"], key="dash_file")
 
     if uploaded_file:
         df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
         
-        # Guardrail subscription check
         if not is_allowed_file(uploaded_file):
-            st.error(f"❌ Dashboard generation for custom file '{uploaded_file.name}' requires an active subscription. Free users can test this module using sample files.")
+            show_subscription_required_warning(uploaded_file.name)
         else:
-            st.markdown("### 📊 Executive Overview KPI Metrics")
             num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
             cat_cols = df.select_dtypes(include=['object', 'string', 'category']).columns.tolist()
 
-            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-            kpi1.metric("Total Records", f"{len(df):,}")
-            kpi2.metric("Total Attributes", f"{len(df.columns)}")
+            st.markdown("#### ⚡ Executive Summary Metrics")
+            k1, k2, k3, k4 = st.columns(4)
+
+            k1.markdown(f"""
+            <div class="kpi-card-container">
+                <div class="kpi-title">Total Rows</div>
+                <div class="kpi-val">{len(df):,}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            k2.markdown(f"""
+            <div class="kpi-card-container">
+                <div class="kpi-title">Attributes / Fields</div>
+                <div class="kpi-val">{len(df.columns)}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
             if num_cols:
-                metric_col = kpi3.selectbox("Primary Metric", num_cols, index=0)
-                kpi3.metric(f"Total {metric_col}", f"{df[metric_col].sum():,.2f}")
-                kpi4.metric(f"Average {metric_col}", f"{df[metric_col].mean():,.2f}")
+                primary_metric = st.selectbox("Primary KPI Target Metric", num_cols, index=0)
+                tot_val = df[primary_metric].sum()
+                avg_val = df[primary_metric].mean()
+
+                k3.markdown(f"""
+                <div class="kpi-card-container">
+                    <div class="kpi-title">Total {primary_metric}</div>
+                    <div class="kpi-val">{tot_val:,.2f}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                k4.markdown(f"""
+                <div class="kpi-card-container">
+                    <div class="kpi-title">Average {primary_metric}</div>
+                    <div class="kpi-val">{avg_val:,.2f}</div>
+                </div>
+                """, unsafe_allow_html=True)
             else:
-                kpi3.metric("Numeric Fields", "None Found")
-                kpi4.metric("Categorical Fields", len(cat_cols))
+                k3.markdown(f"""
+                <div class="kpi-card-container">
+                    <div class="kpi-title">Categorical Fields</div>
+                    <div class="kpi-val">{len(cat_cols)}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                k4.markdown(f"""
+                <div class="kpi-card-container">
+                    <div class="kpi-title">Numeric Fields</div>
+                    <div class="kpi-val">0</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # Statistical Profiler
+            with st.expander("📈 Advanced Statistical Diagnostic Summary"):
+                if num_cols:
+                    stat_df = df[num_cols].describe().T
+                    stat_df['median'] = df[num_cols].median()
+                    stat_df['skewness'] = df[num_cols].skew()
+                    st.dataframe(stat_df[['count', 'mean', 'median', 'std', 'min', 'max', 'skewness']].style.format("{:,.2f}"), use_container_width=True)
+                else:
+                    st.info("No numeric features available for statistical analysis.")
 
             st.markdown("---")
-            st.markdown("### 📈 Visual Analytics Builder")
+            st.markdown("#### 📈 Visual Analytics Builder")
 
             dash_type = st.selectbox(
-                "Select Visualization Type",
+                "Select Visualization Engine",
                 [
-                    "Bar Chart (Category Aggregation)",
-                    "Line Chart (Trend / Time Series)",
+                    "Bar Chart (Categorical Aggregation)",
+                    "Line Chart (Trend & Time Series)",
                     "Scatter Plot (Correlation Analysis)",
-                    "Pie / Donut Chart (Distribution)",
-                    "Histogram (Data Distribution)",
+                    "Pie / Donut Chart (Proportion Share)",
+                    "Histogram (Frequency Distribution)",
                     "Heatmap (Correlation Matrix)"
                 ]
             )
 
             c1, c2 = st.columns(2)
 
-            if dash_type == "Bar Chart (Category Aggregation)":
+            if dash_type == "Bar Chart (Categorical Aggregation)":
                 if cat_cols and num_cols:
-                    x_col = c1.selectbox("Category Column (X-Axis)", cat_cols)
-                    y_col = c2.selectbox("Numeric Value Column (Y-Axis)", num_cols)
-                    agg_func = st.selectbox("Aggregation Function", ["Sum", "Mean", "Count"])
+                    x_col = c1.selectbox("Category Dimension (X-Axis)", cat_cols)
+                    y_col = c2.selectbox("Metric Target (Y-Axis)", num_cols)
+                    agg_func = st.selectbox("Aggregation Rule", ["Sum", "Mean", "Count"])
                     
                     if agg_func == "Sum":
-                        grouped_df = df.groupby(x_col)[y_col].sum().reset_index()
+                        grouped = df.groupby(x_col, as_index=False)[y_col].sum()
                     elif agg_func == "Mean":
-                        grouped_df = df.groupby(x_col)[y_col].mean().reset_index()
+                        grouped = df.groupby(x_col, as_index=False)[y_col].mean()
                     else:
-                        grouped_df = df.groupby(x_col)[y_col].count().reset_index()
+                        grouped = df.groupby(x_col, as_index=False)[y_col].count()
 
-                    fig = px.bar(grouped_df, x=x_col, y=y_col, title=f"{agg_func} of {y_col} by {x_col}", template="plotly_white", text_auto='.2s')
+                    fig = px.bar(
+                        grouped, x=x_col, y=y_col,
+                        title=f"<b>{agg_func} of {y_col} by {x_col}</b>",
+                        template="plotly_white",
+                        color_discrete_sequence=["#2563EB"]
+                    )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning("Bar charts require at least one categorical column and one numeric column.")
+                    st.warning("Bar charts require at least 1 categorical column and 1 numeric column.")
 
-            elif dash_type == "Line Chart (Trend / Time Series)":
-                date_or_seq = list(df.columns)
+            elif dash_type == "Line Chart (Trend & Time Series)":
                 if num_cols:
-                    x_col = c1.selectbox("Time or Sequence Axis (X-Axis)", date_or_seq)
-                    y_col = c2.selectbox("Metric Column (Y-Axis)", num_cols)
-                    fig = px.line(df, x=x_col, y=y_col, title=f"{y_col} Trend Over {x_col}", template="plotly_white", markers=True)
+                    x_col = c1.selectbox("Time or Axis Dimension", df.columns)
+                    y_col = c2.selectbox("Metric Target", num_cols)
+                    fig = px.line(
+                        df, x=x_col, y=y_col,
+                        title=f"<b>{y_col} Over {x_col}</b>",
+                        template="plotly_white",
+                        markers=True,
+                        color_discrete_sequence=["#0EA5E9"]
+                    )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning("Line charts require at least one numeric metric column.")
+                    st.warning("Line charts require at least 1 numeric metric column.")
 
             elif dash_type == "Scatter Plot (Correlation Analysis)":
                 if len(num_cols) >= 2:
-                    x_col = c1.selectbox("X-Axis Variable", num_cols, index=0)
-                    y_col = c2.selectbox("Y-Axis Variable", num_cols, index=min(1, len(num_cols)-1))
-                    color_col = st.selectbox("Group / Color By (Optional)", ["None"] + cat_cols)
+                    x_col = c1.selectbox("X-Axis Metric", num_cols, index=0)
+                    y_col = c2.selectbox("Y-Axis Metric", num_cols, index=min(1, len(num_cols)-1))
+                    color_col = st.selectbox("Group / Color Dimension (Optional)", ["None"] + cat_cols)
                     
                     color_param = None if color_col == "None" else color_col
-                    fig = px.scatter(df, x=x_col, y=y_col, color=color_param, title=f"Correlation: {x_col} vs {y_col}", template="plotly_white")
+                    fig = px.scatter(
+                        df, x=x_col, y=y_col, color=color_param,
+                        title=f"<b>Correlation: {x_col} vs {y_col}</b>",
+                        template="plotly_white"
+                    )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning("Scatter plots require at least two numeric columns.")
+                    st.warning("Scatter plots require at least 2 numeric columns.")
 
-            elif dash_type == "Pie / Donut Chart (Distribution)":
+            elif dash_type == "Pie / Donut Chart (Proportion Share)":
                 if cat_cols:
-                    names_col = c1.selectbox("Category Field", cat_cols)
-                    values_col = c2.selectbox("Value Field (Optional Count if None)", ["Record Count"] + num_cols)
-                    
-                    hole_val = 0.4 if st.checkbox("Render as Donut Chart", value=True) else 0.0
+                    names_col = c1.selectbox("Category Dimension", cat_cols)
+                    values_col = c2.selectbox("Value Metric (Optional)", ["Record Count"] + num_cols)
+                    hole_val = 0.45 if st.checkbox("Render as Modern Donut Chart", value=True) else 0.0
                     
                     if values_col == "Record Count":
-                        fig = px.pie(df, names=names_col, title=f"Distribution by {names_col}", hole=hole_val, template="plotly_white")
+                        fig = px.pie(df, names=names_col, title=f"<b>Distribution by {names_col}</b>", hole=hole_val, template="plotly_white")
                     else:
-                        fig = px.pie(df, names=names_col, values=values_col, title=f"{values_col} Share by {names_col}", hole=hole_val, template="plotly_white")
+                        fig = px.pie(df, names=names_col, values=values_col, title=f"<b>{values_col} Share by {names_col}</b>", hole=hole_val, template="plotly_white")
                     
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning("Pie charts require at least one categorical column.")
+                    st.warning("Pie charts require at least 1 categorical column.")
 
-            elif dash_type == "Histogram (Data Distribution)":
+            elif dash_type == "Histogram (Frequency Distribution)":
                 if num_cols:
-                    num_col = c1.selectbox("Numeric Field", num_cols)
-                    bins = c2.slider("Number of Bins", min_value=5, max_value=50, value=15)
-                    fig = px.histogram(df, x=num_col, nbins=bins, title=f"Distribution Frequency of {num_col}", template="plotly_white")
+                    num_col = c1.selectbox("Target Numeric Field", num_cols)
+                    bins = c2.slider("Histogram Bins", min_value=5, max_value=60, value=20)
+                    fig = px.histogram(
+                        df, x=num_col, nbins=bins,
+                        title=f"<b>Frequency Distribution of {num_col}</b>",
+                        template="plotly_white",
+                        color_discrete_sequence=["#3B82F6"]
+                    )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning("Histograms require at least one numeric column.")
+                    st.warning("Histograms require at least 1 numeric column.")
 
             elif dash_type == "Heatmap (Correlation Matrix)":
                 if len(num_cols) >= 2:
                     corr = df[num_cols].corr()
-                    fig = px.imshow(corr, text_auto=True, aspect="auto", title="Numeric Feature Correlation Heatmap", color_continuous_scale="Blues", template="plotly_white")
+                    fig = px.imshow(
+                        corr, text_auto=".2f", aspect="auto",
+                        title="<b>Numeric Feature Correlation Matrix</b>",
+                        color_continuous_scale="Blues",
+                        template="plotly_white"
+                    )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning("Correlation Heatmaps require at least two numeric columns.")
+                    st.warning("Correlation Heatmaps require at least 2 numeric columns.")
