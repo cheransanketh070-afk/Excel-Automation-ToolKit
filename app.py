@@ -83,7 +83,7 @@ def is_allowed_file(file_or_files):
     return file_or_files.name in ALLOWED_SAMPLE_NAMES
 
 # ==========================================
-# GENERATE IN-MEMORY SAMPLE FILES IF MISSING
+# GENERATE ENHANCED LARGE SAMPLE FILES IF MISSING
 # ==========================================
 @st.cache_data
 def get_sample_excel_bytes():
@@ -91,20 +91,64 @@ def get_sample_excel_bytes():
         with open("01_Messy_Customer_Data.xlsx", "rb") as f:
             return f.read()
     
-    # Dynamic fallback generator
-    data = [
-        [" CUST-101 ", " john DOE ", "JOHN.DOE@GMAIL.COM", "1234567890", "2024-01-15", 448.79],
-        [" CUST-102 ", "SARAH connor", "invalid_email_here", "1234567890", "02/20/2023", 1123.97],
-        [" CUST-103 ", "michael scott ", "m.scott@dundermifflin.com", "+1 (987) 654-3210", "2022/12/05", 950.00],
-        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
-        [" CUST-104 ", "Pam Beesly", "pam.b@gmail..com", "555-0199", "15-08-2021", 120.50],
-        [" CUST-101 ", " john DOE ", "JOHN.DOE@GMAIL.COM", "1234567890", "2024-01-15", 448.79]
+    # Dynamic fallback generator with rich multi-column, multi-year dataset
+    np.random.seed(42)
+    
+    names = [" john DOE ", "SARAH connor", "michael scott ", "Pam Beesly", " Dwight Schrute ", "jim HALPERT", "Stanley Hudson", "Phyllis Vance", "Angela Martin", " Kevin Malone "]
+    domains = ["gmail.com", "yahoo.com", "dundermifflin.com", "sky.net", "hotmail.com"]
+    bad_emails = ["invalid_email_here", "pam.b@gmail..com", "dwight@dunder..com", "m.scott@dundermifflin"]
+    phones = ["1234567890", "+1 (987) 654-3210", "555-0199", "15550201122", "123 456 7890", "9876543210"]
+    dates = ["2021-03-15", "02/20/2022", "2023/12/05", "15-08-2024", "2025-01-10", "11/05/2021", "2022-09-30", "2023-04-18", "2024/06/25", "2025/02/14"]
+    regions = ["North", "South", "East", "West", "Central"]
+    categories = ["Technology", "Office Supplies", "Furniture", "Electronics", "Software"]
+    statuses = [" COMPLETED ", "pending", "CANCELLED", " Completed ", "Shipped", "Processing"]
+    sales_reps = ["Alice Smith", "Bob Jones", "Charlie Brown", "Diana Prince", "Evan Wright"]
+
+    rows = []
+    for i in range(1, 501):
+        # Inject blank rows periodically to test blank row removal
+        if i in [15, 45, 90, 150, 250, 380]:
+            rows.append([np.nan] * 14)
+            continue
+
+        cust_id = f" CUST-{(i % 150) + 101:03d} "
+        name = names[i % len(names)]
+        
+        # Mix valid and messy emails
+        if i % 7 == 0:
+            email = bad_emails[i % len(bad_emails)]
+        else:
+            clean_n = name.strip().lower().replace(" ", ".")
+            email = f"{clean_n}@{domains[i % len(domains)]}"
+
+        phone = phones[i % len(phones)]
+        reg_date = dates[i % len(dates)]
+        region = regions[i % len(regions)]
+        category = categories[i % len(categories)]
+        status = statuses[i % len(statuses)]
+        sales_rep = sales_reps[i % len(sales_reps)]
+        
+        units = int((i * 7 % 80) + 1)
+        unit_price = round(float((i * 13 % 150) + 12.5), 2)
+        total_revenue = round(units * unit_price, 2)
+        profit = round(total_revenue * float(((i % 4) + 1) * 0.12), 2)
+        satisfaction_rating = round(float((i % 5) + 1), 1)
+
+        rows.append([cust_id, name, email, phone, reg_date, region, category, status, sales_rep, units, unit_price, total_revenue, profit, satisfaction_rating])
+
+    cols = [
+        " Customer ID ", "Full Name", "Email Address", "Phone Number", 
+        "Registration Date", "Region", "Category", "Status", "Sales Rep", 
+        "Units Sold", "Unit Price", "Total Revenue", "Profit", "Satisfaction Rating"
     ]
-    columns = [" Customer ID ", "Full Name", "Email Address", "Phone Number", "Registration Date", "Account Balance"]
-    df = pd.DataFrame(data, columns=columns)
+    df = pd.DataFrame(rows, columns=cols)
+
+    # Force duplicate rows to test deduplication
+    df = pd.concat([df, df.iloc[[5, 12, 25, 60, 100, 200, 300]]], ignore_index=True)
+
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
+        df.to_excel(writer, index=False, sheet_name='Customer_Data')
     return output.getvalue()
 
 @st.cache_data
@@ -113,13 +157,29 @@ def get_sample_csv_bytes():
         with open("02_Dataset_A_Customers.csv", "rb") as f:
             return f.read()
             
-    # Dynamic fallback generator
-    data = {
-        "CustomerID": ["CUST-101", "CUST-102", "CUST-103", "CUST-104"],
-        "CustomerName": ["Acme Corp", "Globex", "Initech", "Umbrella Corp"],
-        "Region": ["North", "South", "East", "West"]
-    }
-    df = pd.DataFrame(data)
+    # Dynamic fallback CSV generator with overlapping key IDs (CUST-101 to CUST-250)
+    rows = []
+    regions = ["North", "South", "East", "West", "Central"]
+    tier = ["Enterprise", "Mid-Market", "SMB", "Startup"]
+    
+    for i in range(101, 251):
+        cust_id = f"CUST-{i:03d}"
+        cust_name = f"Client Company {i}"
+        reg = regions[i % len(regions)]
+        account_tier = tier[i % len(tier)]
+        credit_limit = (i * 1000) % 50000 + 10000
+        active_status = "Active" if i % 5 != 0 else "Inactive"
+        
+        rows.append({
+            "CustomerID": cust_id,
+            "CustomerName": cust_name,
+            "Region": reg,
+            "AccountTier": account_tier,
+            "CreditLimit": credit_limit,
+            "AccountStatus": active_status
+        })
+        
+    df = pd.DataFrame(rows)
     return df.to_csv(index=False).encode('utf-8')
 
 # ==========================================
