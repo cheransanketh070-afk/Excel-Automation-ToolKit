@@ -170,33 +170,38 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# LEMON SQUEEZY CONFIGURATION & LICENSE CHECK
+# GUMROAD CONFIGURATION & LICENSE CHECK
 # ==========================================
-LEMON_SQUEEZY_API_URL = "https://api.lemonsqueezy.com/v1/licenses/activate"
-LEMON_SQUEEZY_CHECKOUT_URL = "https://yourstore.lemonsqueezy.com/checkout/buy/YOUR_PRODUCT_ID"
+GUMROAD_API_URL = "https://api.gumroad.com/v2/licenses/verify"
+GUMROAD_PRODUCT_ID = "YOUR_GUMROAD_PRODUCT_ID"
+GUMROAD_CHECKOUT_URL = "https://gumroad.com/l/YOUR_PRODUCT_ID"
 
 ALLOWED_SAMPLE_NAMES = [
     "Enterprise_Global_Sales_2026.xlsx",
     "Enterprise_Customer_Master_2026.csv"
 ]
 
-def verify_lemon_squeezy_license(license_key):
-    """Verifies user subscription key via Lemon Squeezy API."""
+def verify_gumroad_license(license_key, product_id=GUMROAD_PRODUCT_ID):
+    """Verifies user license key via Gumroad API."""
     if not license_key:
         return False, "No license key entered"
 
     try:
         response = requests.post(
-            LEMON_SQUEEZY_API_URL,
-            headers={"Accept": "application/json"},
-            data={"license_key": license_key.strip()}
+            GUMROAD_API_URL,
+            data={
+                "product_id": product_id,
+                "license_key": license_key.strip()
+            }
         )
         data = response.json()
-        if response.status_code == 200 and data.get("activated", False):
-            meta = data.get("meta", {})
-            return True, f"License Verified ({meta.get('customer_email', 'Active Pro')})"
+        if response.status_code == 200 and data.get("success", False):
+            purchase = data.get("purchase", {})
+            if purchase.get("refunded", False) or purchase.get("chargebacked", False):
+                return False, "License key has been refunded or chargebacked."
+            return True, f"License Verified ({purchase.get('email', 'Active Pro')})"
         else:
-            error_msg = data.get("error", "Invalid or expired license key.")
+            error_msg = data.get("message", "Invalid or expired license key.")
             return False, error_msg
     except Exception as e:
         return False, f"License verification error: {str(e)}"
@@ -406,10 +411,10 @@ st.sidebar.markdown('<div class="sidebar-badge">v2.5 Enterprise Edition</div>', 
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🔑 License Activation")
-input_key = st.sidebar.text_input("Lemon Squeezy License Key", type="password", help="Enter your product key to unlock custom file processing.")
+input_key = st.sidebar.text_input("Gumroad License Key", type="password", help="Enter your product key to unlock custom file processing.")
 
 if st.sidebar.button("Activate License Key", use_container_width=True):
-    is_valid, msg = verify_lemon_squeezy_license(input_key)
+    is_valid, msg = verify_gumroad_license(input_key)
     st.session_state.is_subscribed = is_valid
     st.session_state.license_msg = msg
 
@@ -425,7 +430,7 @@ st.sidebar.markdown(f"""
 
 if not st.session_state.is_subscribed:
     st.sidebar.markdown(
-        f'<a href="{LEMON_SQUEEZY_CHECKOUT_URL}" target="_blank" style="text-decoration:none;">'
+        f'<a href="{GUMROAD_CHECKOUT_URL}" target="_blank" style="text-decoration:none;">'
         f'<button style="width:100%; background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color:#FFF !important; padding:10px; border-radius:8px; font-weight:600; border:none; cursor:pointer; margin-bottom:15px;">'
         f'🛒 Upgrade to Pro Version</button></a>',
         unsafe_allow_html=True
@@ -490,7 +495,7 @@ def show_subscription_required_warning(filename=""):
     st.error(
         f"🔒 **Pro License Required for Custom Uploads**\n\n"
         f"Processing custom files like `{filename}` requires an active Pro license. "
-        f"Please enter your Lemon Squeezy license key in the sidebar, or test the tool for free using the sample datasets downloaded above."
+        f"Please enter your Gumroad license key in the sidebar, or test the tool for free using the sample datasets downloaded above."
     )
 
 # ==========================================
