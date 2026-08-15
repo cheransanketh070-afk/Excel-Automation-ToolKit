@@ -173,8 +173,8 @@ st.markdown("""
 # GUMROAD CONFIGURATION & LICENSE CHECK
 # ==========================================
 GUMROAD_API_URL = "https://api.gumroad.com/v2/licenses/verify"
-GUMROAD_PRODUCT_ID = "YOUR_GUMROAD_PRODUCT_ID"
-GUMROAD_CHECKOUT_URL = "https://gumroad.com/l/YOUR_PRODUCT_ID"
+GUMROAD_PRODUCT_ID = "U3ZNgs-ZZ3nHBMWOWwe8AA=="
+GUMROAD_CHECKOUT_URL = "https://sanketh01.gumroad.com/l/excel?wanted=true"
 
 ALLOWED_SAMPLE_NAMES = [
     "Enterprise_Global_Sales_2026.xlsx",
